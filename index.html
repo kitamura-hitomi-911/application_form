@@ -100,20 +100,15 @@
                         value:val
                     });
                 }
-            },
-            err_msg(){
-                return this.item.err_msgs.join('<br>');
             }
         }
     };
 </script>
 <script type="text/x-template" id="tmpl-app_form-input_time">
-    <div class="form-item">
-        <p class="form-item-ttl" v-if="item.label">{{item.label}}</p>
-        <div class="form-time">
-            <input type="time" :name="item.name" v-model="value" :placeholder="item.placeholder" :max="item.max" :min="item.min" :step="item.step" :disabled="item.disabled">
-        </div>
-        <p class="form-err" v-if="err_msg" v-html="err_msg"></p>
+    <div :class="item.class_name">
+        <span class="form-item-ttl" v-if="item.label">{{item.label}}</span>
+        <input type="time" :name="item.name" v-model="value" :placeholder="item.placeholder" :max="item.max" :min="item.min" :step="item.step" :disabled="item.disabled">
+        <span class="form-item-suf" v-if="item.suf">{{item.suf}}</span>
     </div>
 </script>
 <script>
@@ -123,13 +118,11 @@
     });
 </script>
 <script type="text/x-template" id="tmpl-app_form-input_date">
-    <div class="form-item">
-        <p class="form-item-ttl" v-if="item.label">{{item.label}}</p>
-        <div class="form-date">
-            <input type="date" :name="item.name" v-model="value" :placeholder="item.placeholder" :max="item.max" :step="item.step" :disabled="item.disabled">
-            <!-- UI上、min が今日より後だと、日付の入力がやりづらいので、input タグの min では指定しない -->
-        </div>
-        <p class="form-err" v-if="err_msg" v-html="err_msg"></p>
+    <div :class="item.class_name">
+        <span class="form-item-ttl" v-if="item.label">{{item.label}}</span>
+        <input type="date" :name="item.name" v-model="value" :placeholder="item.placeholder" :max="item.max" :step="item.step" :disabled="item.disabled">
+        <!-- UI上、min が今日より後だと、日付の入力がやりづらいので、input タグの min では指定しない -->
+        <span class="form-item-suf" v-if="item.suf">{{item.suf}}</span>
     </div>
 </script>
 <script>
@@ -139,12 +132,10 @@
     });
 </script>
 <script type="text/x-template" id="tmpl-app_form-input_number">
-    <div class="form-item">
-        <p class="form-item-ttl" v-if="item.label">{{item.label}}</p>
-        <div class="form-number">
-            <input type="number" :name="item.name" v-model="value" :placeholder="item.placeholder" :max="item.max" :min="item.min" :step="item.step" :disabled="item.disabled">
-        </div>
-        <p class="form-err" v-if="err_msg" v-html="err_msg"></p>
+    <div :class="item.class_name">
+        <span class="form-item-ttl" v-if="item.label">{{item.label}}</span>
+        <input type="number" :name="item.name" v-model="value" :placeholder="item.placeholder" :max="item.max" :min="item.min" :step="item.step" :disabled="item.disabled">
+        <span class="form-item-suf" v-if="item.suf">{{item.suf}}</span>
     </div>
 </script>
 <script>
@@ -154,12 +145,10 @@
     });
 </script>
 <script type="text/x-template" id="tmpl-app_form-input_text">
-    <div class="form-item">
-        <p class="form-item-ttl" v-if="item.label">{{item.label}}</p>
-        <div class="form-text">
-            <input type="text" :name="item.name" v-model="value" :placeholder="item.placeholder" :maxlength="item.maxlength" :minlength="item.minlength" :disabled="item.disabled">
-        </div>
-        <p class="form-err" v-if="err_msg" v-html="err_msg"></p>
+    <div :class="item.class_name">
+        <span class="form-item-ttl" v-if="item.label">{{item.label}}</span>
+        <input type="text" :name="item.name" v-model="value" :placeholder="item.placeholder" :maxlength="item.maxlength" :minlength="item.minlength" :disabled="item.disabled">
+        <span class="form-item-suf" v-if="item.suf">{{item.suf}}</span>
     </div>
 </script>
 <script>
@@ -179,6 +168,7 @@
                             <dt>{{unit.label}}</dt>
                             <dd>
                                 <component v-for="item in unit.items" :key="item.name" :is="item.component_name" :item="item" @update="update"></component>
+                                <p class="form-error" v-if="unit.err_msgs.length" v-html="unit.err_msgs.join('<br>')"></p>
                             </dd>
                         </dl>
                     </template>
@@ -229,16 +219,36 @@
         },
         template:'#tmpl-app_form',
         methods:{
+            update(update_obj){
+                if(Array.isArray(this.item_by_name[update_obj.name].value)){
+                    // 配列の場合は1回リセットして入れなおす
+                    this.item_by_name[update_obj.name].value.splice(0);
+                    Array.isArray(update_obj.value) && update_obj.value.forEach(update_value => {
+                        this.item_by_name[update_obj.name].value.push(update_value);
+                    });
+
+                }else{
+                    this.item_by_name[update_obj.name].value = update_obj.value;
+                }
+
+                // ovserved_item があれば処理
+                this.observed_item[update_obj.name] && this.observed_item[update_obj.name].forEach( observer =>{
+                    observer.callback.call(observer._this,update_obj);
+                });
+            },
             formatFormData(data){
                 // unit のプロパティ
                 const unit_props = {
                     required:['label','id','items'],
-                    optional:[]
+                    optional:[
+                        {err_msgs:[]}
+                    ]
                 };
                 // item の コンポーネント名・プロパティ type別
                 const settings_by_type = {
                     text:{
                         component_name:'FormInputText',
+                        class_name:'input_parts',
                         item_props:{
                             required:['name','type','value'],
                             optional:[
@@ -248,13 +258,13 @@
                                 {minlength:null},
                                 {pattern:null},
                                 {disabled:false},
-                                {is_required:false},
-                                {err_msgs:[]}
+                                {is_required:false}
                             ]
                         }
                     },
                     number:{
                         component_name:'FormInputNumber',
+                        class_name:'input_parts',
                         item_props:{
                             required:['name','type','value'],
                             optional:[
@@ -263,13 +273,13 @@
                                 {min:null},
                                 {step:null},
                                 {disabled:false},
-                                {is_required:false},
-                                {err_msgs:[]}
+                                {is_required:false}
                             ]
                         }
                     },
                     date:{
                         component_name:'FormInputDate',
+                        class_name:'date_parts',
                         item_props:{
                             required:['name','type','value'],
                             optional:[
@@ -278,13 +288,13 @@
                                 {min:null},
                                 {step:null},
                                 {disabled:false},
-                                {is_required:false},
-                                {err_msgs:[]}
+                                {is_required:false}
                             ]
                         }
                     },
                     time:{
                         component_name:'FormInputTime',
+                        class_name:'time_parts',
                         item_props:{
                             required:['name','type','value'],
                             optional:[
@@ -293,20 +303,19 @@
                                 {min:null},
                                 {step:null},
                                 {disabled:false},
-                                {is_required:false},
-                                {err_msgs:[]}
+                                {is_required:false}
                             ]
                         }
                     },
                     radio: {
                         component_name: 'FormInputRadio',
+                        class_name:'radio_parts',
                         item_props:{
                             required:['name','type','list','value'],
                             optional:[
                                 {label:''},
                                 {disabled:false},
-                                {is_required:false},
-                                {err_msgs:[]}
+                                {is_required:false}
                             ]
                         },
                         item_list_props:{
@@ -318,13 +327,13 @@
                     },
                     checkbox: {
                         component_name: 'FormInputCheckbox',
+                        class_name:'checkbox_parts',
                         item_props:{
                             required:['name','type','list','value'],
                             optional:[
                                 {label:''},
                                 {disabled:false},
-                                {is_required:false},
-                                {err_msgs:[]}
+                                {is_required:false}
                             ]
                         },
                         item_list_props:{
@@ -336,13 +345,13 @@
                     },
                     select: {
                         component_name: 'FormSelect',
+                        class_name:'select_parts',
                         item_props:{
                             required:['name','type','list','value'],
                             optional:[
                                 {label:''},
                                 {disabled:false},
-                                {is_required:false},
-                                {err_msgs:[]}
+                                {is_required:false}
                             ]
                         },
                         item_list_props:{
@@ -354,6 +363,7 @@
                     },
                     textarea: {
                         component_name: 'FormTextarea',
+                        class_name:'textarea_parts',
                         item_props:{
                             required:['name','type','value'],
                             optional:[
@@ -362,8 +372,7 @@
                                 {maxlength:null},
                                 {minlength:null},
                                 {disabled:false},
-                                {is_required:false},
-                                {err_msgs:[]}
+                                {is_required:false}
                             ]
                         }
                     }
@@ -413,6 +422,9 @@
 
                     // item の component_name をセット
                     item.component_name = settings_by_type[item.type].component_name;
+
+                    // item の class_name をセット
+                    item.class_name = settings_by_type[item.type].class_name;
 
                     // item の err_msg_set をセット
                     item.err_msg_txt = Object.assign({}, default_err_msg_txt, item.err_msg_txt || {});
