@@ -76,7 +76,56 @@
                     ]
                 },
             ]
-        }
+        },
+        {
+            group_label:'大会形式',
+            units:[
+                {
+                    label: '大会形式',
+                    id: 'tour_type',
+                    items: [
+                        {
+                            type: 'radio',
+                            value: '',
+                            name:'tour_type',
+                            list: [
+                                {
+                                    label: '候補1',
+                                    value: 1,
+                                },
+                                {
+                                    label: '候補2',
+                                    value: 2,
+                                }
+                            ],
+                            is_required: true
+                        }
+                    ]
+                },
+                {
+                    label: 'タイトル',
+                    id: 'title',
+                    items: [
+                        {
+                            type: 'checkbox',
+                            value: [],// checkbox で値が必要なら配列
+                            name:'title',
+                            list: [
+                                {
+                                    label: '候補1',
+                                    value: 1,
+                                },
+                                {
+                                    label: '候補2',
+                                    value: 2,
+                                }
+                            ],
+                            is_required: true
+                        }
+                    ]
+                },
+            ]
+        },
     ];
 </script>
 <!-- ■コンポーネント群 ここから ■■■■■■■■■■■■ -->
@@ -103,6 +152,34 @@
             }
         }
     };
+</script>
+<script type="text/x-template" id="tmpl-app_form-input_checkbox">
+    <div :class="item.class_name">
+        <span class="form-item-ttl" v-if="item.label">{{item.label}}</span>
+        <label :for="item.name+'_'+checkbox.value" v-for="checkbox in item.list">
+            <input type="checkbox" :name="item.name" v-model="value" :value="checkbox.value" :id="item.name+'_'+checkbox.value" :disabled="item.disabled || checkbox.disabled"><span></span>{{checkbox.label}}
+        </label>
+    </div>
+</script>
+<script>
+    Vue.component('FormInputCheckbox',{
+        mixins:[FormItemMixin],
+        template:'#tmpl-app_form-input_checkbox'
+    });
+</script>
+<script type="text/x-template" id="tmpl-app_form-input_radio">
+    <div :class="item.class_name">
+        <span class="form-item-ttl" v-if="item.label">{{item.label}}</span>
+        <label :for="item.name+'_'+radio.value" v-for="radio in item.list">
+            <input type="radio" :name="item.name" v-model="value" :value="radio.value" :id="item.name+'_'+radio.value" :disabled="item.disabled || radio.disabled"><span></span>{{radio.label}}
+        </label>
+    </div>
+</script>
+<script>
+    Vue.component('FormInputRadio',{
+        mixins:[FormItemMixin],
+        template:'#tmpl-app_form-input_radio'
+    });
 </script>
 <script type="text/x-template" id="tmpl-app_form-input_time">
     <div :class="item.class_name">
