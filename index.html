@@ -242,6 +242,7 @@
                             type: 'text',
                             value: '',
                             name:'owner',
+                            is_required_if_valid: true,
                             observe_items:[
                                 {
                                     name: 'prize',
@@ -252,11 +253,17 @@
                                     init: true
                                 }
                             ]
-                        },
+                        }
+                    ]
+                },
+                {
+                    label: '確認事項',
+                    id: 'fee_agree',
+                    items: [
                         {
                             type: 'checkbox',
                             value: [],
-                            name:'owner_agree',
+                            name:'fee_agree',
                             list: [
                                 {
                                     label: '同意事項文章入る同意事項文章入る同意事項文章入る同意事項文章入る1',
@@ -267,6 +274,7 @@
                                     value: 2,
                                 }
                             ],
+                            is_required_all_select: true,
                             observe_items:[
                                 {
                                     name: 'prize',
@@ -280,6 +288,7 @@
                         }
                     ]
                 }
+
             ]
         },
         {
@@ -308,7 +317,7 @@
                                     value: 3,
                                 }
                             ],
-                            is_required: true
+                            is_required_all_select: true
                         }
                     ],
                 }
@@ -502,7 +511,8 @@
                     max:'__MAX__以下の値を指定してください',
                     minlength:'__MINLENGTH__文字以上入力してください',
                     maxlength:'__MAXLENGTH__文字以下で入力してください',
-                    pattern:'不正なフォーマットです'
+                    pattern:'不正なフォーマットです',
+                    all_select:'すべて選択必須です'
                 }
             }
         },
@@ -603,6 +613,7 @@
                                 {pattern:null},
                                 {disabled:false},
                                 {is_required:false},
+                                {is_required_if_valid:false},
                                 {not_send:false}
                             ]
                         }
@@ -619,6 +630,7 @@
                                 {step:null},
                                 {disabled:false},
                                 {is_required:false},
+                                {is_required_if_valid:false},
                                 {not_send:false}
                             ]
                         }
@@ -635,6 +647,7 @@
                                 {step:null},
                                 {disabled:false},
                                 {is_required:false},
+                                {is_required_if_valid:false},
                                 {not_send:false}
                             ]
                         }
@@ -651,6 +664,7 @@
                                 {step:null},
                                 {disabled:false},
                                 {is_required:false},
+                                {is_required_if_valid:false},
                                 {not_send:false}
                             ]
                         }
@@ -664,6 +678,7 @@
                                 {label:''},
                                 {disabled:false},
                                 {is_required:false},
+                                {is_required_if_valid:false},
                                 {not_send:false}
                             ]
                         },
@@ -683,6 +698,8 @@
                                 {label:''},
                                 {disabled:false},
                                 {is_required:false},
+                                {is_required_if_valid:false},
+                                {is_required_all_select:false},
                                 {not_send:false}
                             ]
                         },
@@ -702,6 +719,7 @@
                                 {label:''},
                                 {disabled:false},
                                 {is_required:false},
+                                {is_required_if_valid:false},
                                 {not_send:false}
                             ]
                         },
@@ -724,6 +742,7 @@
                                 {minlength:null},
                                 {disabled:false},
                                 {is_required:false},
+                                {is_required_if_valid:false},
                                 {not_send:false}
                             ]
                         }
@@ -834,7 +853,7 @@
              * @return {boolean} エラーがあるか否か
              */
             _hasErrEmpty(item){
-                return item.is_required && (Array.isArray(item.value) && !item.value.length || !Array.isArray(item.value) && !item.value);
+                return !item.disabled && (item.is_required || item.is_required_if_valid) && (Array.isArray(item.value) && !item.value.length || !Array.isArray(item.value) && !item.value);
             },
             /**
              * min チェック
@@ -842,7 +861,7 @@
              * @return {boolean} エラーがあるか否か
              */
             _hasErrMin(item){
-                return !Array.isArray(item.value) && item.value !== '' && item.min !== void 0 && item.min !== null && item.value < item.min;
+                return !item.disabled && !Array.isArray(item.value) && item.value !== '' && item.min !== void 0 && item.min !== null && item.value < item.min;
             },
             /**
              * max チェック
@@ -850,7 +869,7 @@
              * @return {boolean} エラーがあるか否か
              */
             _hasErrMax(item){
-                return !Array.isArray(item.value) && item.value !== '' && item.max !== void 0 && item.max !== null && item.value > item.max;
+                return !item.disabled && !Array.isArray(item.value) && item.value !== '' && item.max !== void 0 && item.max !== null && item.value > item.max;
             },
             /**
              * minlength チェック
@@ -858,7 +877,7 @@
              * @return {boolean} エラーがあるか否か
              */
             _hasErrMinlength(item){
-                return !Array.isArray(item.value) && item.value !== '' && item.minlength !== void 0 && item.minlength !== null && item.value.length < item.minlength;
+                return !item.disabled && !Array.isArray(item.value) && item.value !== '' && item.minlength !== void 0 && item.minlength !== null && item.value.length < item.minlength;
             },
             /**
              * maxlength チェック
@@ -866,7 +885,7 @@
              * @return {boolean} エラーがあるか否か
              */
             _hasErrMaxlength(item){
-                return !Array.isArray(item.value) && item.value !== '' && item.maxlength !== void 0 && item.maxlength !== null && item.value.length > item.maxlength;
+                return !item.disabled && !Array.isArray(item.value) && item.value !== '' && item.maxlength !== void 0 && item.maxlength !== null && item.value.length > item.maxlength;
             },
             /**
              * pattern チェック
@@ -875,13 +894,21 @@
              */
             _hasErrPattern(item){
                 let ret = false;
-                if(!Array.isArray(item.value) && item.value !== '' && item.pattern !== void 0 && item.pattern){
+                if(!item.disabled && !Array.isArray(item.value) && item.value !== '' && item.pattern !== void 0 && item.pattern){
                     let reg = new RegExp(item.pattern);
                     if(!item.value.match(reg)){
                         ret = true;
                     }
                 }
                 return ret;
+            },
+            /**
+             * all_select チェック
+             * @param {Object} item チェック対象のitem
+             * @return {boolean} エラーがあるか否か
+             */
+            _hasErrAllSelect(item){
+                return !item.disabled && Array.isArray(item.value) && item.is_required_all_select !== void 0 && item.is_required_all_select && item.value.length !== item.list.length;
             },
             onClickSubmit(){
                 // 入力内容チェック
@@ -909,6 +936,9 @@
 
                             // pattern チェック
                             this._hasErrPattern(item) && unit.err_msgs.push(this._getErrMsg('pattern',item));
+
+                            // 全選択チェック
+                            this._hasErrAllSelect(item) && unit.err_msgs.push(this._getErrMsg('all_select',item));
                         });
 
 
