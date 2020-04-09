@@ -477,7 +477,7 @@
 </script>
 <script type="text/x-template" id="tmpl-app_form">
     <div>
-        <form action="./" method="post">
+        <form :action="action" method="get" name="frm"><!-- 値が見やすいように一時的にget -->
             <section class="form" v-for="unit_group in unit_groups" :key="unit_group.group_label">
                 <h1>{{unit_group.group_label}}</h1>
                 <div class="form-grp">
@@ -519,6 +519,14 @@
         props:{
             form_data:{
                 type:Array,
+                required:true
+            },
+            mode:{
+                type:String,
+                required:true
+            },
+            action:{
+                type:String,
                 required:true
             }
         },
@@ -941,35 +949,13 @@
                             this._hasErrAllSelect(item) && unit.err_msgs.push(this._getErrMsg('all_select',item));
                         });
 
-
-                        /*
-                        return unit.items.reduce((err_flg, item) => {
-                            if(!item.disabled){
-
-                                // 未入力チェック
-                                this._hasErrEmpty(item);
-
-                                // min max チェック
-                                // !item.err_msgs.length && this._checkMinMax(item);
-
-                                // minlength maxlength チェック
-                                // !item.err_msgs.length && this._checkMinlengthMaxlength(item);
-
-                                // pattern チェック
-                                // !item.err_msgs.length && this._checkPattern(item);
-
-                            }
-
-                            console.log(item.label,item.err_msgs.length,err_flg);
-                            // item.err_msgs.length があればエラーあり
-                            return !!item.err_msgs.length || err_flg;
-                        }, err_flg) || err_flg;
-                        */
+                        return !!unit.err_msgs.length || err_flg;
                     },group_err_flg);
                 },false);
 
                 if(!err_flg){
-                    // document.frm.submit();
+                    console.log('エラーがないのでsubmit');
+                    document.frm.submit();
                 }
             }
         }
@@ -982,9 +968,11 @@
         new Vue({
             el:'#app',
             data:{
-                form_data:form_data
+                form_data:form_data,
+                mode:'edit',
+                action:'./'
             },
-            template:'<AppForm :form_data="form_data"></AppForm>',
+            template:'<AppForm :form_data="form_data" :mode="mode" :action="action"></AppForm>',
         });
     })();
 </script>
