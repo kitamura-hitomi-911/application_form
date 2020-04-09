@@ -87,7 +87,11 @@
                             value: '',
                             name:'postal_code',
                             placeholder:'000-0000',
-                            is_required: true
+                            pattern:'^[0-9]{3}-[0-9]{4}$',
+                            is_required: true,
+                            err_msg_txt:{
+                                pattern:'000-0000のフォーマットで入力してください'
+                            }
                         }
                     ]
                 },
@@ -864,6 +868,21 @@
             _hasErrMaxlength(item){
                 return !Array.isArray(item.value) && item.value !== '' && item.maxlength !== void 0 && item.maxlength !== null && item.value.length > item.maxlength;
             },
+            /**
+             * pattern チェック
+             * @param {Object} item チェック対象のitem
+             * @return {boolean} エラーがあるか否か
+             */
+            _hasErrPattern(item){
+                let ret = false;
+                if(!Array.isArray(item.value) && item.value !== '' && item.pattern !== void 0 && item.pattern){
+                    let reg = new RegExp(item.pattern);
+                    if(!item.value.match(reg)){
+                        ret = true;
+                    }
+                }
+                return ret;
+            },
             onClickSubmit(){
                 // 入力内容チェック
                 let err_flg = this.unit_groups.reduce((group_err_flg, group) => {
@@ -887,6 +906,9 @@
 
                             // maxlength チェック
                             this._hasErrMaxlength(item) && unit.err_msgs.push(this._getErrMsg('maxlength',item));
+
+                            // pattern チェック
+                            this._hasErrPattern(item) && unit.err_msgs.push(this._getErrMsg('pattern',item));
                         });
 
 
