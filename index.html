@@ -621,7 +621,6 @@
             return {
                 unit_groups: [],
                 observed_item:{},
-                can_duplicated_unit_ids:{},
                 default_err_msg_txt:{
                     empty_input:'入力必須です',
                     empty_select:'選択必須です',
@@ -662,6 +661,18 @@
                         return acc;
                     },ret_obj);
                 },{});
+            },
+            units_by_id(){
+                return this.unit_groups.reduce((ret_obj, group) =>{
+                    group.units.forEach(unit => {
+                        let _id = unit.base_id || unit.id;
+                        if(!ret_obj[_id]){
+                            ret_obj[_id] = [];
+                        }
+                        ret_obj[_id].push(unit);
+                    });
+                    return ret_obj;
+                },{});
             }
         },
         created(){
@@ -677,15 +688,6 @@
                 });
                 _unit_group.units.length && this.unit_groups.push(_unit_group);
 
-            });
-
-            // can_duplicated_unit_ids をセット
-            this.unit_groups.forEach(group => {
-                group.units.forEach(unit => {
-                    if(unit.can_duplicate){
-                        this.can_duplicated_unit_ids[unit.id] = [];
-                    }
-                });
             });
 
             // ovserved_item をセット
@@ -1062,10 +1064,9 @@
              * @param {Object} base_unit 複製元のunit
              */
             addUnit(base_unit){
-                console.log(base_unit);
                 let clone_unit = {};
                 let cloned_unit_id = base_unit.id;
-                let id_suf = this._getUniqueIdSuf();
+                let id_suf = this._getUniqueId();
                 // ディープコピー＆一部値はvalueをコピーしない
                 Object.keys(base_unit).forEach(unit_key => {
                     if(Array.isArray(base_unit[unit_key])){
@@ -1097,7 +1098,7 @@
                         group.units.splice(++add_index, 0, clone_unit);
                     }
                 });
-                this.can_duplicated_unit_ids[clone_unit.base_id].push(clone_unit.id);
+                this._setCanDuplicate(clone_unit.base_id);
             },
             /**
              * unit 削除
@@ -1107,8 +1108,28 @@
                 if(!tgt_unit.is_duplicated){
                     return;
                 }
+                let tgt_unit_base_id = tgt_unit.base_id;
+                let tgt_unit_id = tgt_unit.id;
+                this.unit_groups.forEach(group => {
+                    let remove_index = group.units.reduce((remove_index, unit,index) => {
+                        return unit.id === tgt_unit_id ? index : remove_index;
+                    },void 0);
+                    if(remove_index !== void 0){
+                        group.units.splice(remove_index, 1);
+                    }
+                });
+                this._setCanDuplicate(tgt_unit_base_id);
             },
-            _getUniqueIdSuf(){
+            /**
+             * 複製が可能な unit 群の can_duplicate を適用（最後の1つだけ can_duplicate が true になる
+             * @param {String} unit_id 対象の unit の id(base_id)
+             */
+            _setCanDuplicate(unit_id){
+                this.units_by_id[unit_id] && this.units_by_id[unit_id].forEach( (unit, index, origin_list) => {
+                    unit.can_duplicate = index === origin_list.length-1;
+                });
+            },
+            _getUniqueId(){
                 return new Date().getTime().toString(16) + Math.floor(1000 * Math.random()).toString(16)
             },
             onClickSubmit(){
