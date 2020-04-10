@@ -19,7 +19,7 @@
                     items: [
                         {
                             type: 'text',
-                            value: '',
+                            value: '仮入力',
                             name:'tour_name',
                             minlength: 3,
                             maxlength: 80,
@@ -33,7 +33,7 @@
                     items: [
                         {
                             type: 'textarea',
-                            value: '',
+                            value: '仮入力',
                             name:'description',
                             minlength: 5,
                             maxlength: 80,
@@ -47,7 +47,7 @@
                     items: [
                         {
                             type: 'number',
-                            value: '',
+                            value: 10,
                             name:'participants_num',
                             min: 5,
                             max: 1000,
@@ -66,13 +66,13 @@
                     items: [
                         {
                             type: 'date',
-                            value: '',
+                            value: '2020-04-10',
                             name:'tour_date[]',
                             is_required: true
                         },
                         {
                             type: 'time',
-                            value: '',
+                            value: '11:00',
                             name:'tour_time[]',
                             is_required: true
                         },
@@ -84,7 +84,7 @@
                     items: [
                         {
                             type: 'text',
-                            value: '',
+                            value: '333-3333',
                             name:'postal_code',
                             placeholder:'000-0000',
                             pattern:'^[0-9]{3}-[0-9]{4}$',
@@ -106,7 +106,7 @@
                     items: [
                         {
                             type: 'radio',
-                            value: '',
+                            value: '2',
                             name:'tour_type',
                             list: [
                                 {
@@ -128,7 +128,7 @@
                     items: [
                         {
                             type: 'checkbox',
-                            value: [],// checkbox で value で管理したいなら配列
+                            value: [1,2],// checkbox で value で管理したいなら配列
                             name:'title',
                             list: [
                                 {
@@ -155,7 +155,7 @@
                     items: [
                         {
                             type: 'radio',
-                            value: '',
+                            value: '2',
                             name:'fee',
                             list: [
                                 {
@@ -170,10 +170,12 @@
                             is_required: true
                         },
                         {
-                            type: 'text',
+                            type: 'number',
                             value: '',
                             name:'fee_detail',
                             suf:'円',
+                            min:0,
+                            max:10000,
                             observe_items:[
                                 {
                                     name: 'fee',
@@ -217,10 +219,12 @@
                         },
                         {
                             label:'金額',
-                            type: 'text',
+                            type: 'number',
                             value: '',
                             name:'prize_detail',
                             suf:'円',
+                            min:0,
+                            max:99999999,
                             observe_items:[
                                 {
                                     name: 'prize',
@@ -292,6 +296,39 @@
             ]
         },
         {
+            group_label:'セレクトテスト',
+            units:[
+                {
+                    label: 'セレクトテスト',
+                    id: 'select_test',
+                    value:'1',
+                    items: [
+                        {
+                            type: 'select',
+                            value: '1',
+                            name:'select_test',
+                            list: [
+                                {
+                                    label: '↓選択してください',
+                                    value: '',
+                                },
+                                {
+                                    label: '候補1',
+                                    value: 1,
+                                },
+                                {
+                                    label: '候補2',
+                                    value: 2,
+                                }
+                            ],
+                            is_required: true
+                        }
+                    ]
+                }
+            ]
+        },
+        // 同意事項の group は confirm 画面では設定しない
+        {
             group_label:'同意事項',
             units:[
                 {
@@ -334,6 +371,10 @@
             item:{
                 type:Object,
                 required:true
+            },
+            mode:{
+                type:String,
+                required:true
             }
         },
         computed:{
@@ -350,6 +391,9 @@
             },
             name(){
                 return this.item.not_send ? null : this.item.name;
+            },
+            class_name(){
+                return this.mode === 'edit' ? this.item.class_name : 'view_parts';
             }
         }
     };
@@ -357,12 +401,15 @@
 <script type="text/x-template" id="tmpl-app_form-select">
     <div :class="item.class_name">
         <span class="form-item-ttl" v-if="item.label">{{item.label}}</span>
-        <div :class="item.class_name+'-item'">
-            <p :class="item.class_name+'-label'">{{lebel_selected}}</p>
-            <select :name="name" v-model="value" :disabled="item.disabled">
-                <option :value="option.value" v-for="option in item.list" :key="option.value" :disabled="option.disabled">{{option.label}}</option>
-            </select>
-        </div>
+        <template v-if="mode==='edit'">
+            <div :class="item.class_name+'-item'">
+                <p :class="item.class_name+'-label'">{{lebel_selected}}</p>
+                <select :name="name" v-model="value" :disabled="item.disabled">
+                    <option :value="option.value" v-for="option in item.list" :key="option.value" :disabled="option.disabled">{{option.label}}</option>
+                </select>
+            </div>
+        </template>
+        <span class="form-item-label" v-if="mode==='view'">{{value_label}}</span>
         <span class="form-item-suf" v-if="item.suf">{{item.suf}}</span>
     </div>
 </script>
@@ -374,6 +421,9 @@
                 return this.item.list.reduce((acc,option)=> {
                     return option.value == this.item.value ? option.label : acc;
                 },'');
+            },
+            value_label() {
+                return this.lebel_selected || '(未選択)';
             }
         },
         template:'#tmpl-app_form-select'
@@ -382,97 +432,154 @@
 <script type="text/x-template" id="tmpl-app_form-textarea">
     <div :class="item.class_name">
         <span class="form-item-ttl" v-if="item.label">{{item.label}}</span>
-        <textarea :name="name" v-model="value" :placeholder="item.placeholder" :maxlength="item.maxlength" :minlength="item.minlength" :disabled="item.disabled"></textarea>
-        <span class="form-item-suf" v-if="item.suf">{{item.suf}}</span>
+        <textarea :name="name" v-model="value" :placeholder="item.placeholder" :maxlength="item.maxlength" :minlength="item.minlength" :disabled="item.disabled" v-if="mode==='edit'"></textarea>
+        <span class="form-item-label" v-if="mode==='view'">{{value_label}}</span>
     </div>
 </script>
 <script>
     Vue.component('FormTextarea',{
         mixins:[FormItemMixin],
-        template:'#tmpl-app_form-textarea'
+        template:'#tmpl-app_form-textarea',
+        computed: {
+            value_label() {
+                return this.item.value ? this.item.value : '(未入力)';
+            }
+        }
     });
 </script>
 <script type="text/x-template" id="tmpl-app_form-input_checkbox">
     <div :class="item.class_name">
         <span class="form-item-ttl" v-if="item.label">{{item.label}}</span>
-        <p :class="item.class_name+'item'" v-for="checkbox in item.list" :key="checkbox.value">
-            <input type="checkbox" :name="name" v-model="value" :value="checkbox.value" :id="item.name+'_'+checkbox.value" :disabled="item.disabled || checkbox.disabled">
-            <label :for="item.name+'_'+checkbox.value">{{checkbox.label}}</label>
-        </p>
+        <template v-if="mode==='edit'">
+            <p :class="item.class_name+'item'" v-for="checkbox in item.list" :key="checkbox.value">
+                <input type="checkbox" :name="name" v-model="value" :value="checkbox.value" :id="item.name+'_'+checkbox.value" :disabled="item.disabled || checkbox.disabled">
+                <label :for="item.name+'_'+checkbox.value">{{checkbox.label}}</label>
+            </p>
+        </template>
+        <span class="form-item-label" v-if="mode==='view'" v-html="value_label"></span>
     </div>
 </script>
 <script>
     Vue.component('FormInputCheckbox',{
         mixins:[FormItemMixin],
-        template:'#tmpl-app_form-input_checkbox'
+        template:'#tmpl-app_form-input_checkbox',
+        computed: {
+            value_label() {
+                return this.item.value.length ? this.item.list.reduce((value_label_ary, checkbox)=>{
+                    this.item.value.some( value => {
+                        // 数値が文字列になると Array.indexOfでチェックできないので
+                        if(value == checkbox.value){
+                            value_label_ary.push(checkbox.label);
+                            return true;
+                        }
+                        return false;
+                    });
+                    return value_label_ary;
+                },[]).join('<br>') : '(未選択)';
+            }
+        }
     });
 </script>
 <script type="text/x-template" id="tmpl-app_form-input_radio">
     <div :class="item.class_name">
         <span class="form-item-ttl" v-if="item.label">{{item.label}}</span>
-        <p :class="item.class_name+'item'" v-for="radio in item.list" :key="radio.value">
-            <input type="radio" :name="name" v-model="value" :value="radio.value" :id="item.name+'_'+radio.value" :disabled="item.disabled || radio.disabled">
-            <label :for="item.name+'_'+radio.value">{{radio.label}}</label>
-        </p>
+        <template v-if="mode==='edit'">
+            <p :class="item.class_name+'item'" v-for="radio in item.list" :key="radio.value">
+                <input type="radio" :name="name" v-model="value" :value="radio.value" :id="item.name+'_'+radio.value" :disabled="item.disabled || radio.disabled">
+                <label :for="item.name+'_'+radio.value">{{radio.label}}</label>
+            </p>
+        </template>
+        <span class="form-item-label" v-if="mode==='view'">{{value_label}}</span>
     </div>
 </script>
 <script>
     Vue.component('FormInputRadio',{
         mixins:[FormItemMixin],
-        template:'#tmpl-app_form-input_radio'
+        template:'#tmpl-app_form-input_radio',
+        computed: {
+            value_label() {
+                return this.item.list.reduce((value_label, radio)=>{
+                    return radio.value == this.item.value ? radio.label : value_label;
+                },'(未選択)');
+            }
+        }
     });
 </script>
 <script type="text/x-template" id="tmpl-app_form-input_time">
-    <div :class="item.class_name">
+    <div :class="class_name">
         <span class="form-item-ttl" v-if="item.label">{{item.label}}</span>
-        <input type="time" :name="name" v-model="value" :placeholder="item.placeholder" :max="item.max" :min="item.min" :step="item.step" :disabled="item.disabled">
+        <input type="time" :name="name" v-model="value" :placeholder="item.placeholder" :max="item.max" :min="item.min" :step="item.step" :disabled="item.disabled" v-if="mode==='edit'">
+        <span class="form-item-label" v-if="mode==='view'">{{value_label}}</span>
         <span class="form-item-suf" v-if="item.suf">{{item.suf}}</span>
     </div>
 </script>
 <script>
     Vue.component('FormInputTime',{
         mixins:[FormItemMixin],
-        template:'#tmpl-app_form-input_time'
+        template:'#tmpl-app_form-input_time',
+        computed: {
+            value_label() {
+                return this.item.value ? this.item.value : '--:--';
+            }
+        }
     });
 </script>
 <script type="text/x-template" id="tmpl-app_form-input_date">
-    <div :class="item.class_name">
+    <div :class="class_name">
         <span class="form-item-ttl" v-if="item.label">{{item.label}}</span>
-        <input type="date" :name="name" v-model="value" :placeholder="item.placeholder" :max="item.max" :step="item.step" :disabled="item.disabled">
+        <input type="date" :name="name" v-model="value" :placeholder="item.placeholder" :max="item.max" :step="item.step" :disabled="item.disabled" v-if="mode==='edit'">
         <!-- UI上、min が今日より後だと、日付の入力がやりづらいので、input タグの min では指定しない -->
+        <span class="form-item-label" v-if="mode==='view'">{{value_label}}</span>
         <span class="form-item-suf" v-if="item.suf">{{item.suf}}</span>
     </div>
 </script>
 <script>
     Vue.component('FormInputDate',{
         mixins:[FormItemMixin],
-        template:'#tmpl-app_form-input_date'
+        template:'#tmpl-app_form-input_date',
+        computed: {
+            value_label() {
+                return this.item.value ? this.item.value : '----/--/--';
+            }
+        }
     });
 </script>
 <script type="text/x-template" id="tmpl-app_form-input_number">
-    <div :class="item.class_name">
+    <div :class="class_name">
         <span class="form-item-ttl" v-if="item.label">{{item.label}}</span>
-        <input type="number" :name="name" v-model="value" :placeholder="item.placeholder" :max="item.max" :min="item.min" :step="item.step" :disabled="item.disabled">
+        <input type="number" :name="name" v-model="value" :placeholder="item.placeholder" :max="item.max" :min="item.min" :step="item.step" :disabled="item.disabled" v-if="mode==='edit'">
+        <span class="form-item-label" v-if="mode==='view'">{{value_label}}</span>
         <span class="form-item-suf" v-if="item.suf">{{item.suf}}</span>
     </div>
 </script>
 <script>
     Vue.component('FormInputNumber',{
         mixins:[FormItemMixin],
-        template:'#tmpl-app_form-input_number'
+        template:'#tmpl-app_form-input_number',
+        computed: {
+            value_label() {
+                return this.item.value ? this.item.value : '-';
+            }
+        }
     });
 </script>
 <script type="text/x-template" id="tmpl-app_form-input_text">
-    <div :class="item.class_name">
+    <div :class="class_name">
         <span class="form-item-ttl" v-if="item.label">{{item.label}}</span>
-        <input type="text" :name="name" v-model="value" :placeholder="item.placeholder" :maxlength="item.maxlength" :minlength="item.minlength" :disabled="item.disabled">
+        <input type="text" :name="name" v-model="value" :placeholder="item.placeholder" :maxlength="item.maxlength" :minlength="item.minlength" :disabled="item.disabled" v-if="mode==='edit'">
+        <span class="form-item-label" v-if="mode==='view'">{{value_label}}</span>
         <span class="form-item-suf" v-if="item.suf">{{item.suf}}</span>
     </div>
 </script>
 <script>
     Vue.component('FormInputText',{
         mixins:[FormItemMixin],
-        template:'#tmpl-app_form-input_text'
+        template:'#tmpl-app_form-input_text',
+        computed: {
+            value_label() {
+                return this.item.value ? this.item.value : '(未入力)';
+            }
+        }
     });
 </script>
 <script type="text/x-template" id="tmpl-app_form">
@@ -485,7 +592,7 @@
                         <dl :class="unit.class_name" :key="unit.id">
                             <dt>{{unit.label}}</dt>
                             <dd>
-                                <component v-for="item in unit.items" :key="item.name" :is="item.component_name" :item="item" @update="update"></component>
+                                <component v-for="item in unit.items" :key="item.name" :is="item.component_name" :item="item" @update="update" :mode="mode"></component>
                                 <p class="form-error" v-if="unit.err_msgs.length" v-html="unit.err_msgs.join('<br>')"></p>
                             </dd>
                         </dl>
@@ -969,7 +1076,7 @@
             el:'#app',
             data:{
                 form_data:form_data,
-                mode:'edit',
+                mode:'view',/* edit | view */
                 action:'./'
             },
             template:'<AppForm :form_data="form_data" :mode="mode" :action="action"></AppForm>',
