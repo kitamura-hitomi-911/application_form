@@ -621,6 +621,7 @@
             return {
                 unit_groups: [],
                 observed_item:{},
+                can_duplicated_unit_ids:{},
                 default_err_msg_txt:{
                     empty_input:'入力必須です',
                     empty_select:'選択必須です',
@@ -664,7 +665,7 @@
             }
         },
         created(){
-            // unit_list をセット
+            // unit_group をセット
             form_data.forEach(data=>{
                 let _unit_group = {
                     group_label:data.group_label,
@@ -676,6 +677,15 @@
                 });
                 _unit_group.units.length && this.unit_groups.push(_unit_group);
 
+            });
+
+            // can_duplicated_unit_ids をセット
+            this.unit_groups.forEach(group => {
+                group.units.forEach(unit => {
+                    if(unit.can_duplicate){
+                        this.can_duplicated_unit_ids[unit.id] = [];
+                    }
+                });
             });
 
             // ovserved_item をセット
@@ -1052,7 +1062,10 @@
              * @param {Object} base_unit 複製元のunit
              */
             addUnit(base_unit){
+                console.log(base_unit);
                 let clone_unit = {};
+                let cloned_unit_id = base_unit.id;
+                let id_suf = this._getUniqueIdSuf();
                 // ディープコピー＆一部値はvalueをコピーしない
                 Object.keys(base_unit).forEach(unit_key => {
                     if(Array.isArray(base_unit[unit_key])){
@@ -1068,20 +1081,23 @@
                         clone_unit[unit_key] = base_unit[unit_key];
                     }
                 });
+                clone_unit.base_id = clone_unit.base_id === void 0 ? clone_unit.id : clone_unit.base_id;
+                clone_unit.id = clone_unit.base_id + id_suf;
                 clone_unit.is_duplicated = true;
+
                 clone_unit.items.forEach(item => {
-                    item.id += '_';
+                    item.id += id_suf;
                 });
 
                 this.unit_groups.forEach(group => {
                     let add_index = group.units.reduce((add_index, unit,index) => {
-                        return unit.id === clone_unit.id ? index : add_index;
+                        return unit.id === cloned_unit_id ? index : add_index;
                     },void 0);
                     if(add_index !== void 0){
-                        clone_unit.id += '_';
                         group.units.splice(++add_index, 0, clone_unit);
                     }
                 });
+                this.can_duplicated_unit_ids[clone_unit.base_id].push(clone_unit.id);
             },
             /**
              * unit 削除
@@ -1091,6 +1107,9 @@
                 if(!tgt_unit.is_duplicated){
                     return;
                 }
+            },
+            _getUniqueIdSuf(){
+                return new Date().getTime().toString(16) + Math.floor(1000 * Math.random()).toString(16)
             },
             onClickSubmit(){
                 // 入力内容チェック
