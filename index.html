@@ -70,15 +70,18 @@
                             type: 'date',
                             value: '',
                             name:'tour_date[]',
-                            min:formatDate(now,'YYYY-MM-DD'),
-                            max:formatDate(now,'YYYY')*1+1*1+'-'+formatDate(now,'MM-DD'),
+                            min:formatDate(now,'YYYY-MM-DD'),// サーバサイドで今日を出力
+                            max:formatDate(now,'YYYY')*1+1*1+'-'+formatDate(now,'MM-DD'),// サーバサイドで1年後の今日を出力
                             is_required: true
                         },
                         {
                             type: 'time',
                             value: '',
                             name:'tour_time[]',
-                            is_required: true
+                            is_required: true,
+                            err_msg_txt:{
+                                empty_input:'時間は入力必須です'
+                            }
                         },
                     ],
                     can_duplicate:true
@@ -389,7 +392,7 @@
                 },
                 set(val){
                     this.$emit('update',{
-                        name:this.item.name,
+                        id:this.item.id,
                         value:val
                     });
                 }
@@ -597,7 +600,7 @@
                         <dl :class="unit.class_name" :key="unit.id">
                             <dt v-if="!unit.is_duplicated">{{unit.label}}</dt>
                             <dd>
-                                <component v-for="item in unit.items" :key="item.name" :is="item.component_name" :item="item" @update="update" :mode="mode"></component>
+                                <component v-for="item in unit.items" :key="item.id" :is="item.component_name" :item="item" @update="update" :mode="mode"></component>
                                 <p class="form-error" v-if="unit.err_msgs.length" v-html="unit.err_msgs.join('<br>')"></p>
                             </dd>
                             <dd v-if="unit.is_duplicated"><a href="#" @click.prevent="removeUnit(unit)">削除</a></dd>
@@ -700,19 +703,19 @@
         template:'#tmpl-app_form',
         methods:{
             update(update_obj){
-                if(Array.isArray(this.item_by_id[update_obj.name].value)){
+                if(Array.isArray(this.item_by_id[update_obj.id].value)){
                     // 配列の場合は1回リセットして入れなおす
-                    this.item_by_id[update_obj.name].value.splice(0);
+                    this.item_by_id[update_obj.id].value.splice(0);
                     Array.isArray(update_obj.value) && update_obj.value.forEach(update_value => {
-                        this.item_by_id[update_obj.name].value.push(update_value);
+                        this.item_by_id[update_obj.id].value.push(update_value);
                     });
 
                 }else{
-                    this.item_by_id[update_obj.name].value = update_obj.value;
+                    this.item_by_id[update_obj.id].value = update_obj.value;
                 }
 
                 // ovserved_item があれば処理
-                this.observed_item[update_obj.name] && this.observed_item[update_obj.name].forEach( observer =>{
+                this.observed_item[update_obj.id] && this.observed_item[update_obj.id].forEach( observer =>{
                     observer.callback.call(observer._this,update_obj);
                 });
             },
@@ -1044,8 +1047,13 @@
             _hasErrAllSelect(item){
                 return !item.disabled && Array.isArray(item.value) && item.is_required_all_select !== void 0 && item.is_required_all_select && item.value.length !== item.list.length;
             },
+            /**
+             * unit を複製し、複製元のunitの次に差し込む
+             * @param {Object} base_unit 複製元のunit
+             */
             addUnit(base_unit){
                 let clone_unit = {};
+                // ディープコピー＆一部値はvalueをコピーしない
                 Object.keys(base_unit).forEach(unit_key => {
                     if(Array.isArray(base_unit[unit_key])){
                         /* items, err_msgs */
@@ -1075,8 +1083,14 @@
                     }
                 });
             },
+            /**
+             * unit 削除
+             * @param {Object} base_unit 削除対象のunit
+             */
             removeUnit(tgt_unit){
-
+                if(!tgt_unit.is_duplicated){
+                    return;
+                }
             },
             onClickSubmit(){
                 // 入力内容チェック
