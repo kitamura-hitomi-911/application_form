@@ -11,6 +11,47 @@
 <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
 <script>
     var now = new Date("2020/04/10 12:01:12");// サーバサイドで今日の日付を埋め込み
+    /**
+     * group > unit > item という構成です。
+     * item … formのinput等のパーツ1つ1つのこと。
+     * unit … 項目名に対して item をまとめる単位。unit と item が 1:1のケースが大半。
+     * group … unit をカテゴリでまとめた単位。
+     * @namespace
+     * @property {Array}   form_data group の配列
+     * @property {string}  form_data[].group_label group の見出し
+     * @property {Array}   form_data[].units[] unit の配列
+     *
+     * -- unit の Object --
+     * @property {string}  form_data[].units[].label unit のlabel
+     * @property {string}  form_data[].units[].id unit の id ※他のunit の id と重複させない。（item の name との重複は問題なし）
+     * @property {Boolean} [form_data[].units[].can_duplicate = false] unitの単位で複製できる場合は true を指定
+     * @property {Array}   form_data[].units[].items item の配列
+     *
+     * -- item の Object --
+     * @property {string}        form_data[].units[].items[].type (text | number | date | time | radio | checkbox | select | textarea)
+     * @property {string,number,Array} form_data[].units[].items[].value ※type = checkbox のみ Array
+     * @property {string}        form_data[].units[].items[].name ※他の item の name と重複させない。
+     * @property {string}        [form_data[].units[].items[].label] item の前に出力する文字列
+     * @property {string}        [form_data[].units[].items[].suf] item の後ろに出力する文字列
+     * @property {Array}         [form_data[].units[].items[].list] type が radio, checkbox, select なら必須。label(sting)、value(string,number)を持つObjectの配列
+     * @property {string,number} [form_data[].units[].items[].min]
+     * @property {string,number} [form_data[].units[].items[].max]
+     * @property {number}        [form_data[].units[].items[].minlength]
+     * @property {number}        [form_data[].units[].items[].maxlength]
+     * @property {string,number} [form_data[].units[].items[].placeholder]
+     * @property {string}        [form_data[].units[].items[].pattern]
+     * @property {Boolean}       [form_data[].units[].items[].disabled = false]
+     * @property {Boolean}       [form_data[].units[].items[].is_required = false] disabled が true の場合、is_required の true は無効 になる
+     * @property {Boolean}       [form_data[].units[].items[].is_required_all_select = false] type = checkbox のみ指定可。また、disabled が true の場合、is_required_all_select の true は無効 になる
+     * @property {Boolean}       [form_data[].units[].items[].not_send = false] true だと name を出力しない = form submit で送られない
+     * @property {Object}        [form_data[].units[].items[].err_msg_txt] デフォルトエラーメッセージ（AppForm.$data.default_err_msg_txt）を上書きしたいときに指定
+     * @property {Array}        [form_data[].units[].items[].observe_items] observe_item（他の項目と連動しての制御情報）の配列
+     *
+     * -- observe_item の Object --
+     * @property {string}        form_data[].units[].items[].observe_items[].name 監視する item の name
+     * @property {Function}      form_data[].units[].items[].observe_items[].changeCallback 監視する item に更新があると呼ばれる関数。第1パラメータ(observed_item)が監視する item の Object、関数内 this が監視元（自身）の item。※ここはアロー関数NG
+     * @property {Boolean}       [form_data[].units[].items[].observe_items[].init = false] 初期化時に changeCallback を実行する場合は true
+     */
     var form_data = [
         {
             group_label:'概要',
@@ -171,7 +212,7 @@
                                     value: 1,
                                 },
                                 {
-                                    label: 'あり',
+                                    label: 'あり（こっちを選ぶと金額入力）',
                                     value: 2,
                                 }
                             ],
@@ -193,7 +234,11 @@
                                     },
                                     init: true
                                 }
-                            ]
+                            ],
+                            is_required: true,
+                            err_msg_txt:{
+                                empty_input:'参加費ありの場合、金額の入力必須です'
+                            }
                         }
                     ]
                 },
@@ -211,15 +256,15 @@
                                     value: 1,
                                 },
                                 {
-                                    label: 'あり1',
+                                    label: 'あり1(提供者入力必須)',
                                     value: 2,
                                 },
                                 {
-                                    label: 'あり2',
+                                    label: 'あり2(金額・提供者入力必須)',
                                     value: 3,
                                 },
                                 {
-                                    label: 'あり3',
+                                    label: 'あり3(金額・提供者入力必須)',
                                     value: 4,
                                 }
                             ],
@@ -652,6 +697,9 @@
             }
         },
         computed:{
+            /**
+             * id(≒name) をキーにした item の Object を返す。
+             */
             item_by_id(){
                 return this.unit_groups.reduce((ret_obj, group) =>{
                     return group.units.reduce((acc,unit) => {
@@ -662,6 +710,9 @@
                     },ret_obj);
                 },{});
             },
+            /**
+             * id をキーにした unit の Object を返す。
+             */
             units_by_id(){
                 return this.unit_groups.reduce((ret_obj, group) =>{
                     group.units.forEach(unit => {
@@ -677,7 +728,7 @@
         },
         created(){
             // unit_group をセット
-            form_data.forEach(data=>{
+            this.form_data.forEach(data=>{
                 let _unit_group = {
                     group_label:data.group_label,
                     units:[]
@@ -925,11 +976,11 @@
                     // item の id をセット
                     this.$set(item, 'id', item.name);
 
-                    // item の component_name をセット（リアクティブである必要はないのでそのまま代入）
-                    item.component_name = settings_by_type[item.type].component_name;
+                    // item の component_name をセット
+                    this.$set(item, 'component_name', settings_by_type[item.type].component_name);
 
-                    // item の class_name をセット（リアクティブである必要はないのでそのまま代入）
-                    item.class_name = settings_by_type[item.type].class_name;
+                    // item の class_name をセット
+                    this.$set(item, 'class_name', settings_by_type[item.type].class_name);
 
                     // item.list のプロパティのチェック
                     const _item_list_props = settings_by_type[item.type].item_list_props || '';
@@ -951,12 +1002,11 @@
 
                 });
 
-                // itemから算出したプロパティをunitに追加
-                data.is_required = data.items.some(item => {
-                    return item.is_required;
-                });
+                // itemから unit 単位の class_name をセット
                 let _class_name = {
-                    'is_required':data.is_required
+                    'is_required':data.items.some(item => {
+                        return item.is_required;
+                    })
                 };
                 _class_name['form-unit-'+data.id] = true;
                 data.class_name = _class_name;
@@ -971,11 +1021,14 @@
              */
             _getErrMsg(err_type,item){
                 let err_msg = '';
+                // item 個別に err_msg_txt が設定されていればそちらを優先
                 let err_msg_txt = Object.assign({}, this.default_err_msg_txt, item.err_msg_txt || {});
                 if(err_type === 'empty'){
+                    // empty は未入力と未選択のメッセージだし分け
                     err_type = (item.type === 'radio' || item.type === 'checkbox' || item.type === 'select') ? 'empty_select' : 'empty_input';
                 }
                 if(err_type === 'min' || err_type === 'max'){
+                    // min, max は、 type = date と type = time と それ以外（＝type = number）でメッセージだし分け
                     err_type = (item.type === 'date' || item.type === 'time') ? err_type + '_' + item.type : err_type;
                 }
                 err_msg = err_msg_txt[err_type];
@@ -1067,7 +1120,7 @@
                 let clone_unit = {};
                 let cloned_unit_id = base_unit.id;
                 let id_suf = this._getUniqueId();
-                // ディープコピー＆一部値はvalueをコピーしない
+                // 複製元の unit を clone。err_msgs[] は空配列、それ以外はディープコピー
                 Object.keys(base_unit).forEach(unit_key => {
                     if(Array.isArray(base_unit[unit_key])){
                         /* items, err_msgs */
@@ -1082,14 +1135,19 @@
                         clone_unit[unit_key] = base_unit[unit_key];
                     }
                 });
+                // base_id がなければ（複製元がオリジナル）id を base_id として適用
                 clone_unit.base_id = clone_unit.base_id === void 0 ? clone_unit.id : clone_unit.base_id;
+                // 複製する unit の id は既存の id と重複しないように末尾にユニークな文字列を追加
                 clone_unit.id = clone_unit.base_id + id_suf;
+                // 複製する unit は is_duplicated = true で適用（base_id の有無でわかるが、見た目でわかりやすいプロパティ名で追加）
                 clone_unit.is_duplicated = true;
 
+                // 複製する unit.items[] の id を既存の id と重複しないように末尾にユニークな文字列を追加
                 clone_unit.items.forEach(item => {
                     item.id += id_suf;
                 });
 
+                // 複製元の unit の次に、複製した unit を差し込む
                 this.unit_groups.forEach(group => {
                     let add_index = group.units.reduce((add_index, unit,index) => {
                         return unit.id === cloned_unit_id ? index : add_index;
@@ -1098,11 +1156,13 @@
                         group.units.splice(++add_index, 0, clone_unit);
                     }
                 });
+
+                // unit の can_duplicate の調整
                 this._setCanDuplicate(clone_unit.base_id);
             },
             /**
              * unit 削除
-             * @param {Object} base_unit 削除対象のunit
+             * @param {Object} tgt_unit 削除対象のunit
              */
             removeUnit(tgt_unit){
                 if(!tgt_unit.is_duplicated){
@@ -1129,15 +1189,23 @@
                     unit.can_duplicate = index === origin_list.length-1;
                 });
             },
+            /**
+             * ユニークなIDを返す
+             * @return {String}
+             */
             _getUniqueId(){
                 return new Date().getTime().toString(16) + Math.floor(1000 * Math.random()).toString(16)
             },
+            /**
+             * 送信をクリックした際の処理
+             * 入力チェックをして、エラーがなければ送信、エラーがあればエラーメッセージを表示
+             */
             onClickSubmit(){
                 // 入力内容チェック
                 let err_flg = this.unit_groups.reduce((group_err_flg, group) => {
                     return group.units.reduce((err_flg, unit) => {
                         // エラー初期化
-                        let _already_empty_err = false; // unit内の未入力エラーメッセージは1つにする
+                        let _already_empty_err = false; // unit内に未入力エラーが複数あっても、未入力エラーのメッセージは1つにするためのチェックフラグ
                         unit.err_msgs.splice(0);
 
                         unit.items.forEach(item => {
