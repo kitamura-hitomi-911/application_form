@@ -9,6 +9,7 @@
 <div id="app"></div>
 <script src="common.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<!-- ■form の情報ここから（value は サーバサイドで出力。他、必要に応じて blade による制御が入ってよい ） ■■■■■■■■■■■■ -->
 <script>
     var now = new Date("2020/04/10 12:01:12");// サーバサイドで今日の日付を埋め込み
     /**
@@ -41,11 +42,12 @@
      * @property {string,number} [form_data[].units[].items[].placeholder]
      * @property {string}        [form_data[].units[].items[].pattern]
      * @property {Boolean}       [form_data[].units[].items[].disabled = false]
-     * @property {Boolean}       [form_data[].units[].items[].is_required = false] disabled が true の場合、is_required の true は無効 になる
+     * @property {Boolean}       [form_data[].units[].items[].is_required = false] disabled が true の場合、is_required の true は無効 になるが、item が disabled = false なら入力必須としたいなら、 is_required_if_valid を使用する
+     * @property {Boolean}       [form_data[].units[].items[].is_required_if_valid = false] disabled = false の場合のみ入力必須 としたい場合、true と指定
      * @property {Boolean}       [form_data[].units[].items[].is_required_all_select = false] type = checkbox のみ指定可。また、disabled が true の場合、is_required_all_select の true は無効 になる
      * @property {Boolean}       [form_data[].units[].items[].not_send = false] true だと name を出力しない = form submit で送られない
      * @property {Object}        [form_data[].units[].items[].err_msg_txt] デフォルトエラーメッセージ（AppForm.$data.default_err_msg_txt）を上書きしたいときに指定
-     * @property {Array}        [form_data[].units[].items[].observe_items] observe_item（他の項目と連動しての制御情報）の配列
+     * @property {Array}         [form_data[].units[].items[].observe_items] observe_item（他の項目と連動しての制御情報）の配列
      *
      * -- observe_item の Object --
      * @property {string}        form_data[].units[].items[].observe_items[].name 監視する item の name
@@ -235,7 +237,7 @@
                                     init: true
                                 }
                             ],
-                            is_required: true,
+                            is_required_if_valid: true,
                             err_msg_txt:{
                                 empty_input:'参加費ありの場合、金額の入力必須です'
                             }
@@ -278,6 +280,7 @@
                             suf:'円',
                             min:0,
                             max:99999999,
+                            is_required_if_valid:true,
                             observe_items:[
                                 {
                                     name: 'prize',
@@ -416,7 +419,9 @@
 
     ];
 </script>
-<!-- ■コンポーネント群 ここから ■■■■■■■■■■■■ -->
+<!-- ■form の情報ここまで（value は サーバサイドで出力。他、必要に応じて blade による制御が入ってよい ） ■■■■■■■■■■■■ -->
+
+<!-- ■コンポーネント群 ここから（この中に blade の制御は入らない） ■■■■■■■■■■■■ -->
 <script>
     // form_item 共通の mixin
     var FormItemMixin = {
@@ -727,21 +732,21 @@
             }
         },
         created(){
-            // unit_group をセット
+            // this.$data.unit_group をセット
             this.form_data.forEach(data=>{
                 let _unit_group = {
                     group_label:data.group_label,
                     units:[]
                 };
                 data.units.forEach(unit=>{
-                    const formated_form_unit_data = this.formatFormData(unit);
-                    formated_form_unit_data && _unit_group.units.push(formated_form_unit_data);
+                    const formated_unit_data = this.formatUnitData(unit);
+                    formated_unit_data && _unit_group.units.push(formated_unit_data);
                 });
                 _unit_group.units.length && this.unit_groups.push(_unit_group);
 
             });
 
-            // ovserved_item をセット
+            // this.$data.ovserved_item をセット（監視されている item をキーにして observed_item に追加）
             this.unit_groups.forEach(group => {
                 group.units.forEach(unit => {
                     unit.items.forEach(item => {
@@ -765,9 +770,15 @@
         },
         template:'#tmpl-app_form',
         methods:{
+            /**
+             * item 単位の更新処理
+             * @param {Object} update_obj item の更新情報
+             * @param {string} update_obj.id 更新対象の item の id
+             * @param {string,number} update_obj.value 更新後の値
+             */
             update(update_obj){
                 if(Array.isArray(this.item_by_id[update_obj.id].value)){
-                    // 配列の場合は1回リセットして入れなおす
+                    // value が配列の場合は1回リセットして入れなおす
                     this.item_by_id[update_obj.id].value.splice(0);
                     Array.isArray(update_obj.value) && update_obj.value.forEach(update_value => {
                         this.item_by_id[update_obj.id].value.push(update_value);
@@ -777,20 +788,42 @@
                     this.item_by_id[update_obj.id].value = update_obj.value;
                 }
 
-                // ovserved_item があれば処理
+                // 更新があった item を監視している item があれば処理
                 this.observed_item[update_obj.id] && this.observed_item[update_obj.id].forEach( observer =>{
                     observer.callback.call(observer._this,update_obj);
                 });
             },
-            formatFormData(data){
-                // unit のプロパティ
+            /**
+             * unit データを整形して返す
+             * @param {Object} unit_data 整形したい unitデータ
+             * @return {Object} 整形後の unit データ（必須プロパティがなければ null が返る）
+             */
+            formatUnitData(unit_data){
+                let _is_valid = true;
+                /**
+                 * unit のプロパティ
+                 * @namespace
+                 * @property {Array.<string>} required unit の必須プロパティ、不足していれば console.error で出力
+                 * @property {Array.<Object>} optional unit の任意プロパティ情報の Object の配列。 Key名が任意プロパティ名、 value が デフォルト値
+                 */
                 const unit_props = {
                     required:['label','id','items'],
                     optional:[
                         {err_msgs:[]}
                     ]
                 };
-                // item の コンポーネント名・プロパティ type別
+                /**
+                 * item type別 の コンポーネント名・プロパティ
+                 * @namespace
+                 * @property {Object} (text | number | date | time | radio | checkbox | select | textarea) 以下【type名】と記載
+                 * @property {string} 【type名】.component_name
+                 * @property {string} 【type名】.class_name
+                 * @property {Object} 【type名】.item_props
+                 * @property {Array.<string>} 【type名】.item_props.required item の必須プロパティ、不足していれば console.error で出力
+                 * @property {Array.<Object>} 【type名】.item_props.optional item の任意プロパティ情報の Object の配列。Key名が任意プロパティ名、 value が デフォルト値
+                 * @property {Array.<string>} 【type名】.item_list_props.required item.list[] の必須プロパティ、不足していれば console.error で出力。type が radio, checkbox, select の場合のみ
+                 * @property {Array.<string>} 【type名】.item_list_props.optional item.list[] の任意プロパティ情報の Object の配列。Key名が任意プロパティ名、 value が デフォルト値。type が radio, checkbox, select の場合のみ
+                 */
                 const settings_by_type = {
                     text:{
                         component_name:'FormInputText',
@@ -942,29 +975,38 @@
 
                 };
 
-                // unit の必須プロパティの不足チェック
-                if(unit_props.required.some(prop=> data[prop] === void 0)){
-                    console.error('Missing required property in form data',data);
-                    return null;
+                // unit の必須プロパティの不足チェック、なければ console.error で出力
+                if(unit_props.required.some(prop=> unit_data[prop] === void 0)){
+                    console.error('Missing required property in form data',unit_data);
+                    _is_valid = false;
                 }
-                // unit の任意プロパティのチェック
+                // unit の任意プロパティ、なければ初期値追加
                 unit_props.optional.forEach(prop_default => {
                     Object.keys(prop_default).forEach(key => {
-                        if(data[key] === void 0){
-                            this.$set(data, key, prop_default[key]);
+                        if(unit_data[key] === void 0){
+                            this.$set(unit_data, key, prop_default[key]);
                         }
                     });
                 });
 
-                data.items.forEach(item => {
+                // item 単位のチェック
+                unit_data.items.forEach(item => {
+
+                    // type のみ最初にチェック
+                    if(!item.type || !settings_by_type[item.type]){
+                        console.error('Missing or invalid required property \'type\' in item data',item);
+                        _is_valid = false;
+                        return;
+                    }
 
                     // item のプロパティチェック
                     const _item_props = settings_by_type[item.type].item_props;
-                    // 必須
+                    // 必須プロパティ、なければ console.error で出力
                     if(_item_props.required.some(prop => item[prop] === void 0)){
                         console.error('Missing required property in item data',item);
+                        _is_valid = false;
                     }
-                    // 任意
+                    // 任意プロパティ、なければ初期値追加
                     _item_props.optional.forEach(prop_default => {
                         Object.keys(prop_default).forEach(key => {
                             if(item[key] === void 0){
@@ -985,11 +1027,11 @@
                     // item.list のプロパティのチェック
                     const _item_list_props = settings_by_type[item.type].item_list_props || '';
                     _item_list_props && item.list && item.list.forEach(list_item => {
-                        // 必須
+                        // 必須プロパティ、なければ console.error で出力
                         if(_item_list_props.required.some(prop => list_item[prop] === void 0)){
                             console.error('Missing required property in item.list data',item);
                         }
-                        // 任意
+                        // 任意プロパティ、なければ初期値追加
                         _item_list_props.optional.forEach(prop_default => {
                             Object.keys(prop_default).forEach(key => {
                                 if(list_item[key] === void 0){
@@ -1004,14 +1046,14 @@
 
                 // itemから unit 単位の class_name をセット
                 let _class_name = {
-                    'is_required':data.items.some(item => {
+                    'is_required':unit_data.items.some(item => {
                         return item.is_required;
                     })
                 };
-                _class_name['form-unit-'+data.id] = true;
-                data.class_name = _class_name;
+                _class_name['form-unit-'+unit_data.id] = true;
+                unit_data.class_name = _class_name;
 
-                return data;
+                return _is_valid ? unit_data : null;
             },
             /**
              * エラーメッセージを返す
@@ -1117,9 +1159,15 @@
              * @param {Object} base_unit 複製元のunit
              */
             addUnit(base_unit){
+                // 複製unit の入れ物
                 let clone_unit = {};
+
+                // 複製元のid （後々差し込む位置を探すために必要となるので最初で保持しておく）
                 let cloned_unit_id = base_unit.id;
+
+                // 複製する unit, item の id が重複しないように追加する文字列を生成しておく（unit と item で追加する文字列が一致する必要はないが、一致しても問題ないので）
                 let id_suf = this._getUniqueId();
+
                 // 複製元の unit を clone。err_msgs[] は空配列、それ以外はディープコピー
                 Object.keys(base_unit).forEach(unit_key => {
                     if(Array.isArray(base_unit[unit_key])){
@@ -1243,7 +1291,9 @@
         }
     });
 </script>
-<!-- ■コンポーネント群 ここまで ■■■■■■■■■■■■ -->
+<!-- ■コンポーネント群 ここまで（この中に blade の制御は入らない） ■■■■■■■■■■■■ -->
+
+<!-- ■Vue の ルート埋め込み ここから（action 等、必要に応じて blade による制御が入ってよい ） ■■■■■■■■■■■■ -->
 <script>
     (function () {
         "use strict";
@@ -1258,5 +1308,6 @@
         });
     })();
 </script>
+<!-- ■Vue の ルート埋め込み ここまで（action 等、必要に応じて blade による制御が入ってよい ） ■■■■■■■■■■■■ -->
 </body>
 </html>
