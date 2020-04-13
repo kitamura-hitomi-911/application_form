@@ -6,7 +6,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
 <body>
-<div id="app"></div>
+<div id="app">
+    <form action="./" method="get" name="frm"><!-- action の値は確認画面URL、methodは値が見やすいように一時的にget -->
+        <app-form :form_data="form_data" :mode="mode" :btns="btns"></app-form>
+    </form>
+</div>
+
+<!-- 確認画面テスト用 こっちの id を app にする -->
+<div id="app_">
+    <app-form :form_data="form_data" :mode="mode" :btns="btns">
+        <template v-slot:forms>
+            <form action="./" method="get" name="frm_back"><!-- action の値は入力画面URL、methodは値が見やすいように一時的にget -->
+                <!-- サーバサイドで出力する想定、↓は仮 -->
+                <input type="hidden" name="test" value="hoge">
+            </form>
+            <form action="./" method="get" name="frm_next"><!-- action の値は登録処理URL、methodは値が見やすいように一時的にget -->
+                <!-- サーバサイドで出力する想定、↓は仮 -->
+                <input type="hidden" name="test" value="hogenext">
+            </form>
+        </template>
+    </app-form>
+</div>
 <script src="common.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
 <!-- ■form の情報ここから（value は サーバサイドで出力。他、必要に応じて blade による制御が入ってよい ） ■■■■■■■■■■■■ -->
@@ -361,7 +381,7 @@
                     items: [
                         {
                             type: 'select',
-                            value: '1',
+                            value: '',
                             name:'select_test',
                             list: [
                                 {
@@ -642,27 +662,26 @@
 </script>
 <script type="text/x-template" id="tmpl-app_form">
     <div>
-        <form :action="action" method="get" name="frm"><!-- 値が見やすいように一時的にget -->
-            <section class="form" v-for="unit_group in unit_groups" :key="unit_group.group_label">
-                <h1>{{unit_group.group_label}}</h1>
-                <div class="form-grp">
-                    <template v-for="unit in unit_group.units">
-                        <dl :class="unit.class_name" :key="unit.id">
-                            <dt v-if="!unit.is_duplicated">{{unit.label}}</dt>
-                            <dd>
-                                <component v-for="item in unit.items" :key="item.id" :is="item.component_name" :item="item" @update="update" :mode="mode"></component>
-                                <p class="form-error" v-if="unit.err_msgs.length" v-html="unit.err_msgs.join('<br>')"></p>
-                            </dd>
-                            <dd v-if="unit.is_duplicated"><a href="#" @click.prevent="removeUnit(unit)">削除</a></dd>
-                            <dd v-if="unit.can_duplicate"><a href="#" @click.prevent="addUnit(unit)">{{unit.label}}追加</a></dd>
-                        </dl>
-                    </template>
-                </div>
-            </section>
-            <section class="form_btns">
-                <p class="btn"><a href="#" @click.prevent="onClickSubmit">送信</a></p>
-            </section>
-        </form>
+        <section class="form" v-for="unit_group in unit_groups" :key="unit_group.group_label">
+            <h1>{{unit_group.group_label}}</h1>
+            <div class="form-grp">
+                <template v-for="unit in unit_group.units">
+                    <dl :class="unit.class_name" :key="unit.id">
+                        <dt v-if="!unit.is_duplicated">{{unit.label}}</dt>
+                        <dd>
+                            <component v-for="item in unit.items" :key="item.id" :is="item.component_name" :item="item" @update="update" :mode="mode"></component>
+                            <p class="form-error" v-if="unit.err_msgs.length" v-html="unit.err_msgs.join('<br>')"></p>
+                        </dd>
+                        <dd v-if="unit.is_duplicated"><a href="#" @click.prevent="removeUnit(unit)">削除</a></dd>
+                        <dd v-if="unit.can_duplicate"><a href="#" @click.prevent="addUnit(unit)">{{unit.label}}追加</a></dd>
+                    </dl>
+                </template>
+            </div>
+        </section>
+        <section class="form_btns">
+            <p :class="btn.class_names" v-for="btn in btns" :key="btn.label"><a href="#" @click.prevent="onClickSubmit(btn.form_name)">{{btn.label}}</a></p>
+        </section>
+        <slot name="forms"></slot>
     </div>
 </script>
 <script>
@@ -696,8 +715,8 @@
                 type:String,
                 required:true
             },
-            action:{
-                type:String,
+            btns:{
+                type:Array,
                 required:true
             }
         },
@@ -788,7 +807,7 @@
                     this.item_by_id[update_obj.id].value = update_obj.value;
                 }
 
-                // 更新があった item を監視している item があれば処理
+                // 監視されている item だったら処理
                 this.observed_item[update_obj.id] && this.observed_item[update_obj.id].forEach( observer =>{
                     observer.callback.call(observer._this,update_obj);
                 });
@@ -1246,11 +1265,12 @@
             },
             /**
              * 送信をクリックした際の処理
-             * 入力チェックをして、エラーがなければ送信、エラーがあればエラーメッセージを表示
+             * mode が edit だったら入力チェックをして、エラーがなければ送信、エラーがあればエラーメッセージを表示
+             * @param {String} form_name submit する form の name
              */
-            onClickSubmit(){
-                // 入力内容チェック
-                let err_flg = this.unit_groups.reduce((group_err_flg, group) => {
+            onClickSubmit(form_name){
+                // mode が edit の場合は入力内容チェック
+                let err_flg = this.mode === 'edit' && this.unit_groups.reduce((group_err_flg, group) => {
                     return group.units.reduce((err_flg, unit) => {
                         // エラー初期化
                         let _already_empty_err = false; // unit内に未入力エラーが複数あっても、未入力エラーのメッセージは1つにするためのチェックフラグ
@@ -1285,7 +1305,8 @@
 
                 if(!err_flg){
                     console.log('エラーがないのでsubmit');
-                    document.frm.submit();
+                    console.log(document[form_name]);
+                    document[form_name].submit();
                 }
             }
         }
@@ -1302,9 +1323,28 @@
             data:{
                 form_data:form_data,
                 mode:'edit',/* edit | view */
-                action:'./'
-            },
-            template:'<AppForm :form_data="form_data" :mode="mode" :action="action"></AppForm>',
+                /* 入力画面を想定した btns */
+                btns: [
+                    {
+                        label:'確認画面へ',
+                        form_name:'frm',
+                        class_names:['btn','btn-next']
+                    }
+                ]
+                /* 確認画面を想定した btns */
+                /* btns: [
+                    {
+                        label:'戻る',
+                        form_name:'frm_back',
+                        class_names:['btn','btn-back']
+                    },
+                    {
+                        label:'上記内容で申請',
+                        form_name:'frm_next',
+                        class_names:['btn','btn-next']
+                    }
+                ]*/
+            }
         });
     })();
 </script>
