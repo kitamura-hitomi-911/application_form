@@ -426,6 +426,11 @@ body {
   vertical-align: bottom;
 }
 
+.view_parts .view_parts-value_label {
+  font-size: 14px;
+  line-height: 18px;
+}
+
 .form_btns {
   padding: 20px 10px;
   text-align: center;
@@ -491,6 +496,10 @@ body {
   display: inline-block;
   transform: skewX(15deg);
   color: #a6fd64;
+}
+
+.btn + .btn {
+  margin-left: 10px;
 }
 
 /*# sourceMappingURL=style.css.map */

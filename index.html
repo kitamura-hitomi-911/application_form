@@ -14,7 +14,7 @@
 </div>
 
 <!-- 確認画面テスト用 こっちの id を app にする -->
-<div id="app_">
+<div id="app_" class="l-form">
     <app-form :form_data="form_data" :mode="mode" :btns="btns">
         <template v-slot:forms>
             <form action="./" method="get" name="frm_back"><!-- action の値は入力画面URL、methodは値が見やすいように一時的にget -->
@@ -489,16 +489,16 @@
     };
 </script>
 <script type="text/x-template" id="tmpl-app_form-select">
-    <div :class="item.class_name">
+    <div :class="class_name">
         <template v-if="mode==='edit'">
-            <div :class="item.class_name+'-item'">
-                <p :class="item.class_name+'-label'">{{lebel_selected}}</p>
+            <div :class="class_name+'-item'">
+                <p :class="class_name+'-label'">{{lebel_selected}}</p>
                 <select :name="name" v-model="value" :disabled="item.disabled">
                     <option :value="option.value" v-for="option in item.list" :key="option.value" :disabled="option.disabled">{{option.label}}</option>
                 </select>
             </div>
         </template>
-        <span class="form-item-label" v-if="mode==='view'">{{value_label}}</span>
+        <p :class="class_name + '-value_label'" v-if="mode==='view'">{{value_label}}</p>
     </div>
 </script>
 <script>
@@ -518,9 +518,9 @@
     });
 </script>
 <script type="text/x-template" id="tmpl-app_form-textarea">
-    <div :class="item.class_name">
+    <div :class="class_name">
         <textarea :name="name" v-model="value" :placeholder="item.placeholder" :maxlength="item.maxlength" :minlength="item.minlength" :disabled="item.disabled" v-if="mode==='edit'"></textarea>
-        <span class="form-item-label" v-if="mode==='view'">{{value_label}}</span>
+        <p :class="class_name + '-value_label'" v-if="mode==='view'">{{value_label}}</p>
     </div>
 </script>
 <script>
@@ -535,14 +535,14 @@
     });
 </script>
 <script type="text/x-template" id="tmpl-app_form-input_checkbox">
-    <div :class="item.class_name">
+    <div :class="class_name">
         <template v-if="mode==='edit'">
-            <p :class="item.class_name+'-item'" v-for="checkbox in item.list" :key="checkbox.value">
+            <p :class="class_name+'-item'" v-for="checkbox in item.list" :key="checkbox.value">
                 <input type="checkbox" :name="name" v-model="value" :value="checkbox.value" :id="item.name+'_'+checkbox.value" :disabled="item.disabled || checkbox.disabled">
                 <label :for="item.name+'_'+checkbox.value">{{checkbox.label}}</label>
             </p>
         </template>
-        <span class="form-item-label" v-if="mode==='view'" v-html="value_label"></span>
+        <p :class="class_name + '-value_label'" v-if="mode==='view'">{{value_label}}</p>
     </div>
 </script>
 <script>
@@ -567,14 +567,14 @@
     });
 </script>
 <script type="text/x-template" id="tmpl-app_form-input_radio">
-    <div :class="item.class_name">
+    <div :class="class_name">
         <template v-if="mode==='edit'">
-            <p :class="item.class_name+'-item'" v-for="radio in item.list" :key="radio.value">
+            <p :class="class_name+'-item'" v-for="radio in item.list" :key="radio.value">
                 <input type="radio" :name="name" v-model="value" :value="radio.value" :id="item.name+'_'+radio.value" :disabled="item.disabled || radio.disabled">
                 <label :for="item.name+'_'+radio.value">{{radio.label}}</label>
             </p>
         </template>
-        <span class="form-item-label" v-if="mode==='view'">{{value_label}}</span>
+        <p :class="class_name + '-value_label'" v-if="mode==='view'">{{value_label}}</p>
     </div>
 </script>
 <script>
@@ -593,7 +593,7 @@
 <script type="text/x-template" id="tmpl-app_form-input_time">
     <div :class="class_name">
         <input type="time" :name="name" v-model="value" :placeholder="item.placeholder" :max="item.max" :min="item.min" :step="item.step" :disabled="item.disabled" v-if="mode==='edit'">
-        <span class="form-item-label" v-if="mode==='view'">{{value_label}}</span>
+        <p :class="class_name + '-value_label'" v-if="mode==='view'">{{value_label}}</p>
     </div>
 </script>
 <script>
@@ -611,7 +611,7 @@
     <div :class="class_name">
         <input type="date" :name="name" v-model="value" :placeholder="item.placeholder" :max="item.max" :step="item.step" :disabled="item.disabled" v-if="mode==='edit'">
         <!-- UI上、min が今日より後だと、日付の入力がやりづらいので、input タグの min では指定しない -->
-        <span class="form-item-label" v-if="mode==='view'">{{value_label}}</span>
+        <p :class="class_name + '-value_label'" v-if="mode==='view'">{{value_label}}</p>
     </div>
 </script>
 <script>
@@ -628,7 +628,7 @@
 <script type="text/x-template" id="tmpl-app_form-input_number">
     <div :class="class_name">
         <input type="number" :name="name" v-model="value" :placeholder="item.placeholder" :max="item.max" :min="item.min" :step="item.step" :disabled="item.disabled" v-if="mode==='edit'">
-        <span class="form-item-label" v-if="mode==='view'">{{value_label}}</span>
+        <p :class="class_name + '-value_label'" v-if="mode==='view'">{{value_label}}</p>
     </div>
 </script>
 <script>
@@ -645,7 +645,7 @@
 <script type="text/x-template" id="tmpl-app_form-input_text">
     <div :class="class_name">
         <input type="text" :name="name" v-model="value" :placeholder="item.placeholder" :maxlength="item.maxlength" :minlength="item.minlength" :disabled="item.disabled" v-if="mode==='edit'">
-        <span class="form-item-label" v-if="mode==='view'">{{value_label}}</span>
+        <p :class="class_name + '-value_label'" v-if="mode==='view'">{{value_label}}</p>
     </div>
 </script>
 <script>
@@ -678,7 +678,7 @@
                             <p class="form-unit_remove" v-if="unit.is_duplicated"><a href="#" @click.prevent="removeUnit(unit)" class="remove_unit">×削除</a></p>
                         </dd>
                         <dd class="form-error" v-if="unit.err_msgs.length" v-html="unit.err_msgs.join('<br>')"></dd>
-                        <dd v-if="unit.can_duplicate" class="form-unit_add"><a href="#" @click.prevent="addUnit(unit)" class="add_unit"><span class="add_unit-icon"></span>{{unit.label}}追加</a></dd>
+                        <dd v-if="unit.can_duplicate && mode==='edit'" class="form-unit_add"><a href="#" @click.prevent="addUnit(unit)" class="add_unit"><span class="add_unit-icon"></span>{{unit.label}}追加</a></dd>
                     </dl>
                 </template>
             </div>
@@ -1350,7 +1350,7 @@
             el:'#app',
             data:{
                 form_data:form_data,
-                mode:'edit',/* edit | view */
+                mode:'edit',/* edit | view 入力画面のときは edit、確認画面のときは view を指定 */
                 /* 入力画面を想定した btns */
                 btns: [
                     {
