@@ -1139,10 +1139,6 @@
                     err_msg = err_msg_txt[err_type].replace(/__MAXLENGTH__/g,item.maxlength);
                 }
 
-                if(err_type === 'maxlength'){
-                    err_msg = err_msg_txt[err_type].replace(/__MAXLENGTH__/g,item.maxlength);
-                }
-
                 return err_msg;
             },
             /**
@@ -1215,20 +1211,27 @@
              */
             _hasErrorDuplicates(item){
                 let err_flg = false;
-                let tgt_name = item.name;
                 if(!item.disabled && !Array.isArray(item.value) && item.value !== '' && item.duplicates_not_allowed){
-                    let same_name_items = this.unit_groups.reduce( (ret_ary, group) => {
+                    let same_name_and_value_items = this.unit_groups.reduce( (ret_ary, group) => {
                         return group.units.reduce( (item_ary, unit) => {
-                            unit.items.forEach(item => {
-                                if(item.name === tgt_name){
-                                    item_ary.push(item)
+                            unit.items.forEach(_item => {
+                                if(_item.name === item.name && _item.value === item.value ){
+                                    item_ary.push(_item)
                                 }
                             });
                             return item_ary;
                         },ret_ary);
                     },[]);
-
-                    console.log(same_name_items);
+                    same_name_and_value_items.some((_item,index) =>{
+                        if(_item.id === item.id){
+                            // 自身が2回め以降だったらエラー
+                            if(index !== 0){
+                                err_flg = true;
+                            }
+                            return true;
+                        }
+                        return false;
+                    });
                 }
 
                 return err_flg;
