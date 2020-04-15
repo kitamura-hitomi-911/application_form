@@ -47,6 +47,7 @@
      * @property {string}  [form_data[].units[].label unit のlabel]
      * @property {string}  form_data[].units[].id unit の id ※他のunit の id と重複させない。（item の name との重複は問題なし）
      * @property {Boolean} [form_data[].units[].can_duplicate = false] unitの単位で複製できる場合は true を指定
+     * @property {number}  [form_data[].units[].max_duplicate_num] can_duplicate が true の場合、このunit の最大数（※自身を含める）未指定の場合は制限なし
      * @property {Array}   form_data[].units[].items item の配列
      *
      * -- item の Object --
@@ -153,7 +154,8 @@
                             }
                         },
                     ],
-                    can_duplicate:true
+                    can_duplicate:true,
+                    max_duplicate_num:5
                 },
                 {
                     label: '郵便番号',
@@ -748,7 +750,8 @@
                 },{});
             },
             /**
-             * id をキーにした unit の Object を返す。
+             * (base_id || id) をキーにした unit の Object を返す。
+             * 複製したものは束なるよう、base_id があれば base_id をキーとする
              */
             units_by_id(){
                 return this.unit_groups.reduce((ret_obj, group) =>{
@@ -1311,12 +1314,16 @@
                 this._setCanDuplicate(tgt_unit_base_id);
             },
             /**
-             * 複製が可能な unit 群の can_duplicate を適用（最後の1つだけ can_duplicate が true になる
+             * 複製が可能な unit 群の can_duplicate を適用
+             * unit群の最後の1つのみ can_duplicate が true になる
+             * ただし、max_duplicate_num が指定されている場合、その数を超えていれば can_duplicate は常に false になる
              * @param {String} unit_id 対象の unit の id(base_id)
              */
             _setCanDuplicate(unit_id){
                 this.units_by_id[unit_id] && this.units_by_id[unit_id].forEach( (unit, index, origin_list) => {
-                    unit.can_duplicate = index === origin_list.length-1;
+                    let unit_num = origin_list.length;
+                    let is_over_max_duplicate_num = unit.max_duplicate_num && unit_num >= unit.max_duplicate_num;
+                    unit.can_duplicate = !is_over_max_duplicate_num && index === unit_num-1;
                 });
             },
             /**
