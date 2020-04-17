@@ -551,7 +551,7 @@
         <template v-if="mode==='edit'">
             <p :class="class_name+'-item'" v-for="checkbox in item.list" :key="checkbox.value">
                 <input type="checkbox" :name="name" v-model="value" :value="checkbox.value" :id="item.name+'_'+checkbox.value" :disabled="item.disabled || checkbox.disabled">
-                <label :for="item.name+'_'+checkbox.value">@{{checkbox.label}}</label>
+                <component :is="label_tag" :for="item.name+'_'+checkbox.value">@{{checkbox.label}}</component>
             </p>
         </template>
         <p :class="class_name + '-value_label'" v-if="mode==='view'">@{{value_label}}</p>
@@ -560,6 +560,14 @@
 <script>
     Vue.component('FormInputCheckbox',{
         mixins:[FormItemMixin],
+        props:{
+            is_use_label_tag:{
+                type:Boolean,
+                default(){
+                    return true;
+                }
+            }
+        },
         template:'#tmpl-app_form-input_checkbox',
         computed: {
             value_label() {
@@ -574,6 +582,9 @@
                     });
                     return value_label_ary;
                 },[]).join('<br>') : '(未選択)';
+            },
+            label_tag(){
+                return this.is_use_label_tag ? 'label' : 'p';
             }
         }
     });
