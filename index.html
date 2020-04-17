@@ -674,7 +674,7 @@
 <script type="text/x-template" id="tmpl-app_form">
     <div>
         <section class="form" v-for="unit_group in unit_groups" :key="unit_group.group_label">
-            <h1>@{{unit_group.group_label}}<span class="form-grp_note" v-if="unit_group.note">@{{unit_group.note}}</span></h1>
+            <h1>@{{unit_group.group_label}}<span class="form-grp_note" v-if="unit_group.group_note">@{{unit_group.group_note}}</span></h1>
             <div class="form-grp">
                 <template v-for="unit in unit_group.units">
                     <dl :class="unit.class_name" :key="unit.id" v-if="mode==='edit' || !unit.disabled">
@@ -778,7 +778,7 @@
             this.form_data.forEach(data=>{
                 let _unit_group = {
                     group_label:data.group_label,
-                    note:data.group_note,
+                    group_note:data.group_note,
                     units:[]
                 };
                 data.units.forEach(unit=>{
