@@ -441,7 +441,7 @@
                             not_send:true,
                             list: [
                                 {
-                                    label: '同意事項文章入る同意事項文章入る同意事項文章入る同意事項文章入る1',
+                                    label: '<a href="#">同意事項</a>文章入る同意事項文章入る同意事項文章入る同意事項文章入る1',
                                     value: 1,
                                 },
                                 {
@@ -453,7 +453,8 @@
                                     value: 3,
                                 }
                             ],
-                            is_required_all_select: true
+                            is_required_all_select: true,
+                            is_use_span_tag_for_label:true
                         }
                     ],
                 }
@@ -549,25 +550,21 @@
 <script type="text/x-template" id="tmpl-app_form-input_checkbox">
     <div :class="class_name">
         <template v-if="mode==='edit'">
-            <p :class="class_name+'-item'" v-for="checkbox in item.list" :key="checkbox.value">
+            <p :class="item_class_name" v-for="checkbox in item.list" :key="checkbox.value">
                 <input type="checkbox" :name="name" v-model="value" :value="checkbox.value" :id="item.name+'_'+checkbox.value" :disabled="item.disabled || checkbox.disabled">
-                <component :is="label_tag" :for="item.name+'_'+checkbox.value">@{{checkbox.label}}</component>
+                <label :for="item.name+'_'+checkbox.value" v-if="!item.is_use_span_tag_for_label">@{{checkbox.label}}</label>
+                <template v-else>
+                    <label :for="item.name+'_'+checkbox.value"></label>
+                    <span :class="class_name+'-item-label'" v-html="checkbox.label"></span>
+                </template>
             </p>
         </template>
-        <p :class="class_name + '-value_label'" v-if="mode==='view'">@{{value_label}}</p>
+        <p :class="class_name + '-value_label'" v-if="mode==='view'" v-html="value_label"></p>
     </div>
 </script>
 <script>
     Vue.component('FormInputCheckbox',{
         mixins:[FormItemMixin],
-        props:{
-            is_use_label_tag:{
-                type:Boolean,
-                default(){
-                    return true;
-                }
-            }
-        },
         template:'#tmpl-app_form-input_checkbox',
         computed: {
             value_label() {
@@ -583,8 +580,11 @@
                     return value_label_ary;
                 },[]).join('<br>') : '(未選択)';
             },
-            label_tag(){
-                return this.is_use_label_tag ? 'label' : 'p';
+            item_class_name(){
+                let _class_name = {};
+                _class_name[this.class_name+'-item'] = true;
+                _class_name['is-clickarea_checkbox_only'] = this.item.is_use_span_tag_for_label;
+                return _class_name;
             }
         }
     });
@@ -990,6 +990,7 @@
                                 {is_required:false},
                                 {is_required_if_valid:false},
                                 {is_required_all_select:false},
+                                {is_use_span_tag_for_label:false},
                                 {not_send:false}
                             ]
                         },
