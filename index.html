@@ -71,6 +71,7 @@
      * @property {Boolean}       [form_data[].units[].items[].is_required_all_select = false] type = checkbox のみ指定可。また、disabled が true の場合、is_required_all_select の true は無効 になる
      * @property {Boolean}       [form_data[].units[].items[].duplicates_not_allowed  = false] 同name内で同じ値は不可
      * @property {Boolean}       [form_data[].units[].items[].not_send = false] true だと name を出力しない = form submit で送られない
+     * @property {Boolean}       [form_data[].units[].items[].not_include_label_text_in_label_tag = false] type = checkbox のみ指定可。true だと label タグに label テキストを含めない。
      * @property {Object}        [form_data[].units[].items[].err_msg_txt] デフォルトエラーメッセージ（AppForm.$data.default_err_msg_txt）を上書きしたいときに指定
      * @property {Array}         [form_data[].units[].items[].observe_items] observe_item（他の項目と連動しての制御情報）の配列
      *
@@ -454,7 +455,7 @@
                                 }
                             ],
                             is_required_all_select: true,
-                            is_use_span_tag_for_label:true
+                            not_include_label_text_in_label_tag:true
                         }
                     ],
                 }
@@ -552,7 +553,7 @@
         <template v-if="mode==='edit'">
             <p :class="item_class_name" v-for="checkbox in item.list" :key="checkbox.value">
                 <input type="checkbox" :name="name" v-model="value" :value="checkbox.value" :id="item.name+'_'+checkbox.value" :disabled="item.disabled || checkbox.disabled">
-                <label :for="item.name+'_'+checkbox.value" v-if="!item.is_use_span_tag_for_label">@{{checkbox.label}}</label>
+                <label :for="item.name+'_'+checkbox.value" v-if="!item.not_include_label_text_in_label_tag">@{{checkbox.label}}</label>
                 <template v-else>
                     <label :for="item.name+'_'+checkbox.value"></label>
                     <span :class="class_name+'-item-label'" v-html="checkbox.label"></span>
@@ -583,7 +584,7 @@
             item_class_name(){
                 let _class_name = {};
                 _class_name[this.class_name+'-item'] = true;
-                _class_name['is-clickarea_checkbox_only'] = this.item.is_use_span_tag_for_label;
+                _class_name['is-clickarea_checkbox_only'] = this.item.not_include_label_text_in_label_tag;
                 return _class_name;
             }
         }
@@ -990,7 +991,7 @@
                                 {is_required:false},
                                 {is_required_if_valid:false},
                                 {is_required_all_select:false},
-                                {is_use_span_tag_for_label:false},
+                                {not_include_label_text_in_label_tag:false},
                                 {not_send:false}
                             ]
                         },
